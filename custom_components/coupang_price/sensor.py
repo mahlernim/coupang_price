@@ -3,7 +3,7 @@ from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
-from homeassistant.const import (CONF_NAME, CONF_PREFIX, CONF_SCAN_INTERVAL, CONF_UNIT_OF_MEASUREMENT)
+from homeassistant.const import (CONF_NAME, CONF_PREFIX, CONF_ICON, CONF_SCAN_INTERVAL, CONF_UNIT_OF_MEASUREMENT)
 from datetime import timedelta
 import voluptuous as vol
 from json import loads
@@ -11,9 +11,10 @@ import requests
 
 _LOGGER = logging.getLogger(__name__)
 
-ICON = 'mdi:package-variant-closed'
+DEFAULT_ICON = 'mdi:package-variant-closed'
 DEFAULT_UNIT_OF_MEASUREMENT = '원'
 DEFAULT_SCAN_INTERVAL = timedelta(hours=2)
+SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL
 DEFAULT_PREFIX = 'Coupang'
 
 URL_BASE = 'https://m.coupang.com/vm/v4/enhanced-pdp/products/'
@@ -23,8 +24,7 @@ _ITEM_SCHEMA = vol.All(
     vol.Schema({
         vol.Required('product_id'): cv.string,
         vol.Optional(CONF_NAME): cv.string,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
-        vol.Optional(CONF_UNIT_OF_MEASUREMENT, default=DEFAULT_UNIT_OF_MEASUREMENT): cv.string
+        vol.Optional(CONF_ICON, default=DEFAULT_ICON): cv.icon
     })
 )
 
@@ -32,29 +32,33 @@ _ITEMS_SCHEMA = vol.Schema([_ITEM_SCHEMA])
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required('items'): _ITEMS_SCHEMA,
+    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
+    vol.Optional(CONF_UNIT_OF_MEASUREMENT, default=DEFAULT_UNIT_OF_MEASUREMENT): cv.string,
     vol.Optional(CONF_PREFIX, default=DEFAULT_PREFIX): cv.string
 })
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Initiate the Amazon Price Sensor/s."""
     items = config.get('items')
-    prefix = config.get(CONF_PREFIX)
+    SCAN_INTERVAL = config.get(CONF_SCAN_INTERVAL)
+    unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
+    prefix = config.get(CONF_PREFIX).strip()
     sensors = []
 
     for item in items:
         try:
-            sensors.append(CoupangPriceSensor(item, prefix))
+            sensors.append(CoupangPriceSensor(item, unit_of_measurement, prefix))
         except ValueError as e:
             _LOGGER.error(e)
 
     add_devices(sensors, True)
 
 class CoupangPriceSensor(Entity):
-    def __init__(self, item, prefix):
+    def __init__(self, item, unit_of_measurement, prefix):
         self._product_id = item.get('product_id')
         self._name = item.get(CONF_NAME)
-        self._scan_interval = item.get(CONF_SCAN_INTERVAL)
-        self._unit_of_measurement = item.get(CONF_UNIT_OF_MEASUREMENT)
+        self._icon = item.get(CONF_ICON)
+        self._unit_of_measurement = unit_of_measurement
         self._prefix = prefix
         self._info = {}
     
@@ -71,7 +75,11 @@ class CoupangPriceSensor(Entity):
     @property
     def icon(self):
         """Return the icon for the frontend."""
-        return ICON
+        return self._icon
+
+    @property
+    def unit_of_measurement(self):
+        return self._unit_of_measurement
 
     @property
     def state(self):
@@ -83,12 +91,12 @@ class CoupangPriceSensor(Entity):
         """Return the state attributes."""
         return self._info
     
-    @Throttle(CONF_SCAN_INTERVAL)
+    @Throttle(SCAN_INTERVAL)
     def update(self):
         url = URL_BASE + self._product_id
         r = requests.get(url, headers=REQUEST_HEADER, timeout=5)
         if r.status_code!=200:
-            raise ValueError('HTTP request failed: ' + url)
+            _LOGGER.error('HTTP request failed: ' + url)
         
         try:
             j = loads(r.text)
@@ -102,4 +110,4 @@ class CoupangPriceSensor(Entity):
             self._info['delivery_type'] = info['deliveryType']
             
         except Exception as e:
-            raise ValueError(e)
+            _LOGGER.error(e)
