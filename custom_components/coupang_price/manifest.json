@@ -1,0 +1,10 @@
+{
+  "domain": "coupang_price",
+  "name": "Coupang Price Tracker",
+  "documentation": "https://github.com/mahlernim/coupang_price",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": [
+    "@mahlernim"
+  ]
+}

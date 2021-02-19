@@ -1,0 +1,6 @@
+{
+  "name": "Coupang Price Tracker",
+  "country": "KR",
+  "domains": ["sensor"],  
+  "render_readme": true
+}
