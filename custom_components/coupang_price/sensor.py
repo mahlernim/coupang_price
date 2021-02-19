@@ -12,7 +12,8 @@ import requests
 _LOGGER = logging.getLogger(__name__)
 
 ICON = 'mdi:package-variant-closed'
-SCAN_INTERVAL = timedelta(seconds=2*60*60)
+UNIT_OF_MEASUREMENT = '원'
+SCAN_INTERVAL = timedelta(hours=2)
 
 URL_BASE = 'https://m.coupang.com/vm/v4/enhanced-pdp/products/'
 REQUEST_HEADER = {'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B137 Safari/601.1'}
@@ -44,7 +45,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
     add_devices(sensors, True)
 
-def CoupangPriceSensor(Entity):
+class CoupangPriceSensor(Entity):
     def __init__(self, item):
 	    self._product_id = item.get('product_id')
 	    self._product_name = item.get('product_name')
