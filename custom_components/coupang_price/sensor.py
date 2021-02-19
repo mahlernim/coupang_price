@@ -21,8 +21,7 @@ REQUEST_HEADER = {'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac 
 _ITEM_SCHEMA = vol.All(
     vol.Schema({
         vol.Required('product_id'): cv.string,
-        vol.Optional('product_name'): cv.string,
-		vol.Optional(CONF_NAME): cv.string
+        vol.Optional(CONF_NAME): cv.string
     })
 )
 
@@ -47,12 +46,12 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
 class CoupangPriceSensor(Entity):
     def __init__(self, item):
-	    self._product_id = item.get('product_id')
-	    self._product_name = item.get('product_name')
-	    self._name = item.get(CONF_NAME)
-		self._info = {}
-	
-	@property
+        self._product_id = item.get('product_id')
+        self._product_name = item.get('product_name')
+        self._name = item.get(CONF_NAME)
+        self._info = {}
+    
+    @property
     def name(self):
         """Return the name of the sensor."""
         return self._name
@@ -66,29 +65,29 @@ class CoupangPriceSensor(Entity):
     def state(self):
         """Return the sale price of the item."""
         return self._info['price']
-		
+        
     @property
     def device_state_attributes(self):
         """Return the state attributes."""
         return self._info
-	
-	@Throttle(SCAN_INTERVAL)
-	def update(self):
-	    url = URL_BASE + self._product_id
-		r = requests.get(url, headers=REQUEST_HEADER, timeout=5)
-		if r.status_code!=200:
+    
+    @Throttle(SCAN_INTERVAL)
+    def update(self):
+        url = URL_BASE + self._product_id
+        r = requests.get(url, headers=REQUEST_HEADER, timeout=5)
+        if r.status_code!=200:
             raise ValueError('HTTP request failed: ' + url)
-		
-		try:
-		    j = json.loads(r)
-			info = j['rData']['vendorItemDetail']['item']
-			"""Parse useful info"""
-			self._info['price'] = info['salesPrice']
-			self._info['sold_out'] = info['soldOut']
-			self._info['vendor'] = info['vendor']['name']
-			self._info['unit_price'] = info['unitPrice']
-			self._info['product_name'] = info['productName']
-			self._info['delivery_type'] = info['deliveryType']
-			
-		except Exception as e:
+        
+        try:
+            j = json.loads(r)
+            info = j['rData']['vendorItemDetail']['item']
+            """Parse useful info"""
+            self._info['price'] = info['salesPrice']
+            self._info['sold_out'] = info['soldOut']
+            self._info['vendor'] = info['vendor']['name']
+            self._info['unit_price'] = info['unitPrice']
+            self._info['product_name'] = info['productName']
+            self._info['delivery_type'] = info['deliveryType']
+            
+        except Exception as e:
             raise ValueError(e)
