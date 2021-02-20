@@ -38,7 +38,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Initiate the Amazon Price Sensor/s."""
+    """Initiate coupang_price sensor"""
     items = config.get('items')
     SCAN_INTERVAL = config.get(CONF_SCAN_INTERVAL)
     unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
@@ -55,6 +55,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
 class CoupangPriceSensor(Entity):
     def __init__(self, item, unit_of_measurement, prefix):
+        """initial values"""
         self._product_id = item.get('product_id')
         self._name = item.get(CONF_NAME)
         self._icon = item.get(CONF_ICON)
@@ -79,6 +80,7 @@ class CoupangPriceSensor(Entity):
 
     @property
     def unit_of_measurement(self):
+        """Return unit of measurement"""
         return self._unit_of_measurement
 
     @property
@@ -93,6 +95,7 @@ class CoupangPriceSensor(Entity):
     
     @Throttle(SCAN_INTERVAL)
     def update(self):
+        """Update sensor value"""
         url = URL_BASE + self._product_id
         r = requests.get(url, headers=REQUEST_HEADER, timeout=5)
         if r.status_code!=200:
@@ -102,12 +105,14 @@ class CoupangPriceSensor(Entity):
             j = loads(r.text)
             info = j['rData']['vendorItemDetail']['item']
             """Parse useful info"""
+            self._info['product_id'] = self._product_id
             self._info['price'] = info['salesPrice']
             self._info['sold_out'] = info['soldOut']
             self._info['vendor'] = info['vendor']['name']
-            self._info['unit_price'] = info['unitPrice']
             self._info['product_name'] = info['productName']
             self._info['delivery_type'] = info['deliveryType']
+            if 'unitPrice' in info:
+                self._info['unit_price'] = info['unitPrice']
             
         except Exception as e:
             _LOGGER.error(e)
