@@ -8,6 +8,7 @@ from datetime import timedelta
 import voluptuous as vol
 from json import loads
 import requests
+import re
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,12 +18,13 @@ DEFAULT_SCAN_INTERVAL = timedelta(hours=2)
 SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL
 DEFAULT_PREFIX = 'Coupang'
 
-URL_BASE = 'https://m.coupang.com/vm/v4/enhanced-pdp/products/'
+URL_BASE = 'https://m.coupang.com/vm/v4/'
 REQUEST_HEADER = {'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B137 Safari/601.1'}
 
 _ITEM_SCHEMA = vol.All(
     vol.Schema({
         vol.Required('product_id'): cv.string,
+        vol.Optional('vendor_item_id'): cv.string,
         vol.Optional(CONF_NAME): cv.string,
         vol.Optional(CONF_ICON, default=DEFAULT_ICON): cv.icon
     })
@@ -57,6 +59,7 @@ class CoupangPriceSensor(Entity):
     def __init__(self, item, unit_of_measurement, prefix):
         """initial values"""
         self._product_id = item.get('product_id')
+        self._vendor_item_id = item.get('vendor_item_id')
         self._name = item.get(CONF_NAME)
         self._icon = item.get(CONF_ICON)
         self._unit_of_measurement = unit_of_measurement
@@ -96,17 +99,28 @@ class CoupangPriceSensor(Entity):
     @Throttle(SCAN_INTERVAL)
     def update(self):
         """Update sensor value"""
-        url = URL_BASE + self._product_id
+        if self._vendor_item_id:
+            url = URL_BASE + 'products/' + self._product_id + '/vendor-items/' + self._vendor_item_id
+        else:
+            url = URL_BASE + 'enhanced-pdp/products/' + self._product_id
         r = requests.get(url, headers=REQUEST_HEADER, timeout=5)
         if r.status_code!=200:
             _LOGGER.error('HTTP request failed: ' + url)
         
         try:
+            """select json item data"""
             j = loads(r.text)
-            info = j['rData']['vendorItemDetail']['item']
-            """Parse useful info"""
-            self._info['product_id'] = self._product_id
-            self._info['price'] = info['salesPrice']
+            if 'vendorItemDetail' in j['rData']:
+                info = j['rData']['vendorItemDetail']['item']
+            elif 'item' in j['rData']:
+                info = j['rData']['item']
+            """parse item data"""
+            if ('couponPrice' in info) and info['couponPrice']:
+                self._info['price'] = info['couponPrice']
+            else:
+                self._info['price'] = info['salesPrice']
+            self._info['product_id'] = info['productId']
+            self._info['vendor_item_id'] = info['vendorItemId']
             self._info['sold_out'] = info['soldOut']
             self._info['vendor'] = info['vendor']['name']
             self._info['product_name'] = info['productName']
