@@ -74,7 +74,7 @@ class CoupangPriceSensor(Entity):
                 self._name = 'Unknown Item'
             else:
                self._name = self._info['product_name']
-        return self._prefix + ' ' + self._name
+        return (self._prefix + ' ' + self._name).strip()
 
     @property
     def icon(self):
@@ -125,7 +125,9 @@ class CoupangPriceSensor(Entity):
             self._info['vendor'] = info['vendor']['name']
             self._info['product_name'] = info['productName']
             self._info['delivery_type'] = info['deliveryType']
-            if 'unitPrice' in info:
+            if ('couponUnitPrice' in info) and info['couponUnitPrice']:
+                self._info['unit_price'] = info['couponUnitPrice']
+            elif 'unitPrice' in info:
                 self._info['unit_price'] = info['unitPrice']
             
         except Exception as e:
