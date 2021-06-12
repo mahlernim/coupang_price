@@ -3,7 +3,7 @@
   "name": "Coupang Price Tracker",
   "documentation": "https://github.com/mahlernim/coupang_price",
   "issue_tracker": "https://github.com/mahlernim/coupang_price/issues",
-  "version": "20210612"
+  "version": "20210612",
   "requirements": [],
   "dependencies": [],
   "codeowners": [
