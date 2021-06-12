@@ -3,6 +3,7 @@ A custom component for Home Assistant that tracks item prices on Coupang.com<br>
 등록해둔 쿠팡 상품의 가격을 추적하는 커스텀 컴포넌트
 
 # Logs
+2021-06-12 manifest.json 필수 필드 추가<br>
 2021-02-21 가격 옵션이 여러가지 있는 경우 대응<br>
 2021-02-19 최초 작성
 
